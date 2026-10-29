@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Module 1 · JavaScript teaching lab</title><style>
+:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#111114;color:#ededf0}*{box-sizing:border-box}body{max-width:1100px;margin:auto;padding:28px 20px 60px}h1{font-size:30px;margin:10px 0}h2{font-size:21px}p{color:#b4b4c0;line-height:1.7}.eyebrow{font-size:11px;letter-spacing:2px;color:#a277ff}section{border:1px solid #35353e;border-radius:12px;padding:22px;margin-top:22px}button,a{color:#ededf0}button{background:transparent;border:1px solid #686477;padding:10px 14px;border-radius:7px;cursor:pointer;font:inherit;font-size:13px}button:hover{border-color:#a277ff}button:focus-visible,a:focus-visible{outline:2px solid #61ffca;outline-offset:4px}button:disabled{opacity:.4;cursor:default}.controls{display:flex;gap:8px;flex-wrap:wrap}.columns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:18px}.box{border:1px solid #35353e;border-radius:8px;padding:14px;min-width:0}.box h3{font-size:12px;color:#b4b4c0;margin:0 0 12px}pre,code{font-family:Consolas,monospace;font-size:13px;line-height:1.8}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#17171d;padding:16px;border-radius:8px}.output{color:#61ffca;min-height:155px}.queue{font-size:13px;line-height:1.8;color:#ffca85;white-space:pre-line;min-height:90px}.counter{font-size:32px;color:#a277ff;margin:12px 0}.muted{font-size:12px}.pairs{display:grid;grid-template-columns:1fr 1fr;gap:16px}#explanation{min-height:54px}footer{font-size:12px;color:#b4b4c0;margin-top:28px}@media(max-width:650px){.columns,.pairs{grid-template-columns:1fr}body{padding:20px 14px}section{padding:16px}h1{font-size:25px}}
+</style></head><body><span class="eyebrow">REACT, TYPESCRIPT & NEXT.JS · MODULE 1</span><h1>Think before you run.</h1><p>Predict the result, reveal the execution, then explain the mental model. This lab runs offline without packages.</p>
+<section><h2>01 · Event loop: step through the trace</h2><p>Read the real JavaScript example below. Write down the output order before revealing it. The queue display is a simplified teaching trace, not a full runtime simulator.</p><pre>console.log('A');
+setTimeout(() =&gt; console.log('E'), 0);
+Promise.resolve().then(() =&gt; console.log('C'));
+async function work() {
+  console.log('B');
+  await Promise.resolve();
+  console.log('D');
+}
+work();
+console.log('F');</pre><div class="controls"><button id="next">Reveal next step</button><button id="reset">Reset trace</button><a href="https://youtu.be/06oYUI-RDDY" target="_blank" rel="noopener noreferrer">Watch lesson video ↗</a></div><p id="explanation" aria-live="polite">Ready. Which line runs first?</p><div class="columns"><div class="box"><h3>Output so far</h3><div id="output" class="output" role="log" aria-live="polite"></div></div><div class="box"><h3>Microtasks waiting</h3><div id="microtasks" class="queue">None yet</div></div><div class="box"><h3>Timer callback waiting</h3><div id="tasks" class="queue">None yet</div></div></div></section>
+<section><h2>02 · Closures: two independent counters</h2><p>Each factory call creates its own count binding. Both counters started at zero; the snapshot was captured before any increment.</p><div class="pairs"><div class="box"><h3>Counter A</h3><div id="a" class="counter">0</div><button id="add-a">Increment A</button></div><div class="box"><h3>Counter B</h3><div id="b" class="counter">0</div><button id="add-b">Increment B</button></div></div><p id="snapshot" aria-live="polite">A snapshot: 0 · A live value: 0</p><button id="reset-counters">Reset counters</button><p class="muted">Why does changing A leave B unchanged? Why does the saved snapshot stay at zero?</p></section>
+<section><h2>03 · Immutable updates: copy the changed path</h2><p>A spread copies one level. Rename the user while preserving the original object and sharing the unchanged cart.</p><div class="pairs"><div><h3>Before</h3><pre id="before"></pre></div><div><h3>After</h3><pre id="after"></pre></div></div><div class="controls"><button id="rename">Rename user to Su</button><button id="reset-data">Reset data</button></div><p id="identity" aria-live="polite">Predict: which references will be equal after the update?</p></section><footer>Use the terminal examples for actual scheduling and Fetch exercises. No network requests are made by this page until you open the video link.</footer>
+<script>
+const byId=id=>document.getElementById(id);
+const steps=[
+ {out:'A',micro:[],tasks:[],text:'A runs synchronously on the current call stack.'},
+ {out:null,micro:[],tasks:['E: timer callback'],text:'Schedule E. A zero-delay timer does not execute immediately.'},
+ {out:null,micro:['C: promise callback'],tasks:['E: timer callback'],text:'The resolved promise queues C as a microtask.'},
+ {out:'B',micro:['C: promise callback'],tasks:['E: timer callback'],text:'Calling work() executes B synchronously before its await.'},
+ {out:null,micro:['C: promise callback','D: await continuation'],tasks:['E: timer callback'],text:'await suspends work(); D is queued after C. The caller continues.'},
+ {out:'F',micro:['C: promise callback','D: await continuation'],tasks:['E: timer callback'],text:'F runs before the synchronous work yields.'},
+ {out:'C',micro:['D: await continuation'],tasks:['E: timer callback'],text:'The first queued microtask executes: C.'},
+ {out:'D',micro:[],tasks:['E: timer callback'],text:'The await continuation executes: D. No microtasks remain in this trace.'},
+ {out:'E',micro:[],tasks:[],text:'The timer callback executes: E. Final order: A, B, F, C, D, E.'}
+];
+let step=0;
+byId('next').addEventListener('click',()=>{const current=steps[step++];if(current.out){const line=document.createElement('div');line.textContent=current.out;byId('output').append(line);}byId('microtasks').textContent=current.micro.join('\n')||'Empty';byId('tasks').textContent=current.tasks.join('\n')||'Empty';byId('explanation').textContent=current.text;byId('next').disabled=step===steps.length;});
+byId('reset').addEventListener('click',()=>{step=0;byId('output').replaceChildren();byId('microtasks').textContent='None yet';byId('tasks').textContent='None yet';byId('explanation').textContent='Ready. Which line runs first?';byId('next').disabled=false;});
+function createCounter(){let count=0;const saved=count;return{add:()=>++count,read:()=>count,snapshot:()=>saved};}
+let a=createCounter(),b=createCounter();
+function showCounters(){byId('a').textContent=a.read();byId('b').textContent=b.read();byId('snapshot').textContent=`A snapshot: ${a.snapshot()} · A live value: ${a.read()}`;}
+byId('add-a').addEventListener('click',()=>{a.add();showCounters();});byId('add-b').addEventListener('click',()=>{b.add();showCounters();});byId('reset-counters').addEventListener('click',()=>{a=createCounter();b=createCounter();showCounters();});
+const before={user:{name:'Aye'},cart:[{id:1,quantity:1}]};byId('before').textContent=JSON.stringify(before,null,2);
+function resetData(){byId('after').textContent='No update yet';byId('identity').textContent='Predict: which references will be equal after the update?';}
+byId('rename').addEventListener('click',()=>{const after={...before,user:{...before.user,name:'Su'}};byId('after').textContent=JSON.stringify(after,null,2);byId('identity').textContent=`after === before: ${after===before} · user shared: ${after.user===before.user} · cart shared: ${after.cart===before.cart}`;});byId('reset-data').addEventListener('click',resetData);resetData();
+</script></body></html>

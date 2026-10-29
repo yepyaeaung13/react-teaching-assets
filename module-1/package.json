@@ -1,0 +1,13 @@
+{
+  "name": "module-1-javascript-teaching-assets",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test examples/check.test.mjs",
+    "demo:modern": "node examples/01-modern-javascript.mjs",
+    "demo:closures": "node examples/02-closures.mjs",
+    "demo:immutable": "node examples/03-immutable-data.mjs",
+    "demo:event-loop": "node examples/04-event-loop.mjs",
+    "demo:fetch": "node examples/06-fetch-demo.mjs"
+  }
+}
